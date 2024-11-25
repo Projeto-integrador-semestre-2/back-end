@@ -1,5 +1,5 @@
 import { connectDatabase } from './main.js'
-
+import { msToTimeObject } from '../methods/conversor.js'
 export async function realizarCheck(cpf) {
     try {
         const database = await connectDatabase()
@@ -26,9 +26,73 @@ export async function realizarCheck(cpf) {
                     [actualDate, checks[0][0].id]
                 )
             }
-            return checks
+            return true
         }
         return { message: 'Algo deu errado' }
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export async function relatorioDestaSemana(cpf) {
+    try {
+        const database = await connectDatabase()
+        const user = await database.execute(
+            'select * from users where CPF = ?',
+            [cpf]
+        )
+        if (user[0].length == 0) {
+            return { message: 'Usuário não encontrado!' }
+        } else {
+            let checks = await database.execute(
+                'select * from checks where user_id = ? AND checked = TRUE AND check_in >= CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) - 1) DAY',
+                [user[0][0].id]
+            )
+            if (checks[0].length == 0)
+                return { message: 'Usuário sem nenhum registro!' }
+            else {
+                let soma = 0
+                for (let i = 0; i < checks[0].length; i++) {
+                    const checkIn = new Date(checks[0][i].check_in)
+                    const checkOut = new Date(checks[0][i].check_out)
+                    soma += checkOut.getTime() - checkIn.getTime()
+                }
+                return msToTimeObject(soma)
+            }
+        }
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export async function relatorioGeral(cpf) {
+    try {
+        const database = await connectDatabase()
+        const user = await database.execute(
+            'select * from users where CPF = ?',
+            [cpf]
+        )
+        if (user[0].length == 0) {
+            return { message: 'Usuário não encontrado!' }
+        } else {
+            let checks = await database.execute(
+                `SELECT 
+                WEEK(check_in, 1) AS week_number,            
+                YEAR(check_in) AS year,                      
+                SUM(TIMESTAMPDIFF(HOUR, check_in, check_out)) AS total_hours 
+                FROM 
+                    checks
+                WHERE 
+                    check_out IS NOT NULL  && user_id = ?                     
+                GROUP BY 
+                    YEAR(check_in), WEEK(check_in, 1)
+                ORDER BY 
+                    YEAR(check_in), WEEK(check_in, 1);
+`,
+                [user[0][0].id]
+            )
+            return checks
+        }
     } catch (e) {
         console.log(e)
     }
