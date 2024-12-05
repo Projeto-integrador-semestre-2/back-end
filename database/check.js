@@ -76,22 +76,27 @@ export async function relatorioGeral(cpf) {
             return { message: 'Usuário não encontrado!' }
         } else {
             let checks = await database.execute(
-                `SELECT 
-                WEEK(check_in, 1) AS week_number,            
-                YEAR(check_in) AS year,                      
-                SUM(TIMESTAMPDIFF(HOUR, check_in, check_out)) AS total_hours 
-                FROM 
-                    checks
-                WHERE 
-                    check_out IS NOT NULL  && user_id = ?                     
-                GROUP BY 
-                    YEAR(check_in), WEEK(check_in, 1)
-                ORDER BY 
-                    YEAR(check_in), WEEK(check_in, 1);
+                `SELECT              
+    SUM(
+        IF(
+            check_in IS NOT NULL AND check_out IS NOT NULL, 
+            TIMESTAMPDIFF(SECOND, check_in, check_out) * 1000, 
+            0
+        )
+    ) AS total_milliseconds
+FROM 
+    checks
+WHERE 
+    check_out IS NOT NULL AND user_id = ?                     
+GROUP BY 
+    YEAR(check_in), WEEK(check_in, 1)
+ORDER BY 
+    YEAR(check_in), WEEK(check_in, 1);
+
 `,
                 [user[0][0].id]
             )
-            return checks
+            return msToTimeObject(checks[0][0]['total_milliseconds'])
         }
     } catch (e) {
         console.log(e)

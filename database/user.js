@@ -7,7 +7,7 @@ export async function login(cpf, password) {
             'select * from users where CPF = ? and password = ?',
             [cpf, password]
         )
-        return results[0].length > 0
+        return { result: results[0].length > 0, userRole: results[0][0].Cargo }
     } catch (err) {
         console.log(err)
     }
