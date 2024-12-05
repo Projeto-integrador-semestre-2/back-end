@@ -3,6 +3,7 @@ import {
     realizarCheck,
     relatorioDestaSemana,
     relatorioGeral,
+    relatorio_Completo,
 } from '../database/check.js'
 import { objHaveNullValue } from '../middlewares/validateNotNull.js'
 
@@ -27,6 +28,15 @@ checkRoute.post(
     objHaveNullValue(['cpf']),
     async (req, res) => {
         const result = await relatorioGeral(req.body.cpf)
+        res.json(result)
+    }
+)
+
+checkRoute.post(
+    '/relatorio_completo',
+    objHaveNullValue(['cpf']),
+    async (req, res) => {
+        const result = await relatorio_Completo()
         res.json(result)
     }
 )

@@ -102,3 +102,53 @@ ORDER BY
         console.log(e)
     }
 }
+
+export async function relatorio_Completo() {
+    try {
+        const database = await connectDatabase()
+
+        let checks = await database.execute(
+            `SELECT 
+    u.id AS user_id,
+    u.name,
+    u.CPF,
+    weekly.total_hours_weekly,
+    overall.total_hours_overall
+FROM 
+    users u
+LEFT JOIN (
+    SELECT 
+        user_id,
+        YEAR(check_in) AS year,
+        WEEK(check_in, 1) AS week,
+        SUM(TIMESTAMPDIFF(HOUR, check_in, check_out)) AS total_hours_weekly
+    FROM 
+        checks
+    WHERE 
+        check_out IS NOT NULL
+    GROUP BY 
+        user_id, YEAR(check_in), WEEK(check_in, 1)
+) weekly ON u.id = weekly.user_id
+LEFT JOIN (
+    SELECT 
+        user_id,
+        SUM(TIMESTAMPDIFF(HOUR, check_in, check_out)) AS total_hours_overall
+    FROM 
+        checks
+    WHERE 
+        check_out IS NOT NULL
+    GROUP BY 
+        user_id
+) overall ON u.id = overall.user_id
+ORDER BY 
+    u.id, weekly.year, weekly.week;
+
+
+
+`
+        )
+        return checks
+    } catch (e) {
+        console.log(e)
+    }
+}
